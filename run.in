@@ -1,0 +1,31 @@
+potential    ./nep.txt          # 加载势函数文件 (NEP机器学习势)
+
+
+# --- NPT 弛豫 ---
+time_step    1                   # 时间步长 1 fs
+minimize sd 1.0e-6 10000
+velocity     300                 # 初始化原子速度，对应温度 300 K
+ensemble npt_mttk temp 300 300 aniso 0 0
+
+dump_thermo  1000                # 每 1000 步在输出一次热力学信息 (温度、势能等)
+
+run          100000              # 运行 100,000 步 (即 100 ps)
+
+# --- NVT 升温 ---
+ensemble     nvt_ber 300 300 100 # 使用 Berendsen 热浴进行 NVT 模拟
+                             
+dump_thermo  1000                # 每 1000 步在输出一次热力学信息 (温度、势能等)
+dump_exyz  5000
+run          100000              # 运行 100,000 步 (即 100 ps)
+
+# --- 建立温差 (NEMD) ---
+ensemble     heat_lan 300 100 20 1 78    #这一步是核心计算。撤销了之前的 NVT 控制，改用 Langevin 热源/热汇 来建立温差
+
+fix   0
+move 79 0 0 0
+
+compute      0 10 100 temperature
+compute_shc  2 250 0 1000 400.0 group 0 27
+
+dump_exyz  50000
+run          2000000
